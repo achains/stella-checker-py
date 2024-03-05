@@ -48,6 +48,15 @@ class TypeChecker:
                 return self.__make_context(stellaParser.TypeBoolContext)
             case stellaParser.ConstTrueContext():
                 return self.__make_context(stellaParser.TypeBoolContext)
+            case stellaParser.IfContext() as if_ctx:
+                condition_type = self.infer_expression_type(if_ctx.condition, type_context)
+                if not isinstance(condition_type, stellaParser.TypeBoolContext):
+                    raise UnexpectedTypeError(stellaParser.TypeBoolContext, type(condition_type))
+                then_type = self.infer_expression_type(if_ctx.thenExpr, type_context)
+                else_type = self.infer_expression_type(if_ctx.elseExpr, type_context)
+                if type(then_type) is not type(else_type):
+                    raise UnexpectedTypeError(type(then_type), type(else_type))
+                return then_type
             case stellaParser.VarContext() as var_ctx:
                 var_type = type_context.find(var_ctx.StellaIdent())
                 if var_type is None:
