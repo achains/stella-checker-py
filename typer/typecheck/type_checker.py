@@ -48,6 +48,8 @@ class TypeChecker:
                 return self.__make_context(stellaParser.TypeBoolContext)
             case stellaParser.ConstTrueContext():
                 return self.__make_context(stellaParser.TypeBoolContext)
+            case stellaParser.ConstIntContext():
+                return self.__make_context(stellaParser.TypeNatContext)
             case stellaParser.IfContext() as if_ctx:
                 condition_type = self.infer_expression_type(if_ctx.condition, type_context)
                 if not isinstance(condition_type, stellaParser.TypeBoolContext):
@@ -57,6 +59,11 @@ class TypeChecker:
                 if type(then_type) is not type(else_type):
                     raise UnexpectedTypeError(type(then_type), type(else_type))
                 return then_type
+            case stellaParser.IsZeroContext() as is_zero_ctx:
+                inner_type = self.infer_expression_type(is_zero_ctx.n, type_context)
+                if not isinstance(inner_type, stellaParser.TypeNatContext):
+                    raise UnexpectedTypeError(stellaParser.TypeNatContext, inner_type)
+                return self.__make_context(stellaParser.TypeBoolContext)
             case stellaParser.VarContext() as var_ctx:
                 var_type = type_context.find(var_ctx.StellaIdent())
                 if var_type is None:
@@ -78,7 +85,7 @@ class TypeChecker:
                     raise NotFunctionError
 
                 actual_param_types = [self.infer_expression_type(arg, type_context) for arg in application_ctx.args]
-                expected_param_types = [param.paramType for param in fun_type.paramTypes]
+                expected_param_types = fun_type.paramTypes
 
                 if len(actual_param_types) != len(expected_param_types):
                     raise RuntimeError("TODO: Number of arguments is different")
@@ -87,8 +94,24 @@ class TypeChecker:
                     if not isinstance(actual, type(expected)):
                         raise UnexpectedTypeForParameterError()
                 return fun_type.returnType
+            case stellaParser.AbstractionContext() as abstraction_ctx:
+                return_ctx = type_context.nested_scope()
+                for param_decl in abstraction_ctx.paramDecls:
+                    return_ctx.insert(param_decl.StellaIdent(), param_decl.paramType)
 
-            case _:
+                return_type = self.infer_expression_type(abstraction_ctx.returnExpr, return_ctx)
+
+                abstraction_fun_decl = stellaParser.DeclFunContext(self.__program_context.parser, abstraction_ctx)
+                abstraction_fun_decl.paramDecls = abstraction_ctx.paramDecls
+                abstraction_fun_decl.returnType = return_type
+                return self.__make_function_type(abstraction_fun_decl)
+            case stellaParser.ParenthesisedExprContext() as parens_ctx:
+                return self.infer_expression_type(parens_ctx.expr_, type_context)
+            case stellaParser.TerminatingSemicolonContext() as semicolon_ctx:
+                return self.infer_expression_type(semicolon_ctx.expr_, type_context)
+            case _ as unexpected_context:
+                print(type(unexpected_context))
+                print(unexpected_context.start)
                 raise NotImplementedError
 
     @staticmethod

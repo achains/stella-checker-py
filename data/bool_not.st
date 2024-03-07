@@ -1,16 +1,5 @@
 language core;
 
-fn Bool::not(b : Bool) -> Bool {
-    return
-        if b then false else true
-}
-
-fn twice(f : fn(Bool) -> Bool) -> (fn(Bool) -> Bool) {
-    return fn(x : Bool) {
-        return f(f(x))
-    }
-}
-
-fn main(b : Bool) -> Bool {
-    return twice(Bool::not)(b)
+fn main(a : Nat) -> Bool {
+ 	return (fn (a : Nat) { return Nat::iszero(0); } ) (a)
 }

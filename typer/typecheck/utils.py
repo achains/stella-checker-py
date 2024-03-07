@@ -5,7 +5,7 @@ from typing import Type
 def make_function_type(parser: stellaParser, fun_decl: stellaParser.DeclFunContext) -> stellaParser.TypeFunContext:
     type_fun = stellaParser.TypeFunContext(parser, fun_decl)
     type_fun.returnType = fun_decl.returnType
-    type_fun.paramTypes = fun_decl.paramDecls
+    type_fun.paramTypes = [d.paramType for d in fun_decl.paramDecls]
     return type_fun
 
 
