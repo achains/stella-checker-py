@@ -109,6 +109,16 @@ class TypeChecker:
                 return self.infer_expression_type(parens_ctx.expr_, type_context)
             case stellaParser.TerminatingSemicolonContext() as semicolon_ctx:
                 return self.infer_expression_type(semicolon_ctx.expr_, type_context)
+            case stellaParser.LetContext() as let_ctx:
+                body = let_ctx.body
+                pattern_binding: stellaParser.PatternBindingContext
+                let_type_ctx = type_context.nested_scope()
+                for pattern_binding in let_ctx.patternBindings:
+                    binding_token = pattern_binding.pat.StellaIdent()
+                    binding_type = self.infer_expression_type(pattern_binding.rhs, let_type_ctx)
+                    let_type_ctx.insert(binding_token, binding_type)
+
+                return self.infer_expression_type(body, let_type_ctx)
             case _ as unexpected_context:
                 print(type(unexpected_context))
                 print(unexpected_context.start)
