@@ -1,5 +1,7 @@
 from typing import Type
 
+from antlr4.Token import CommonToken
+
 from typer.grammar.stellaParser import stellaParser
 from typer.typecheck.type_context import TypeContext
 from typer.typecheck.type_error import *
@@ -42,7 +44,8 @@ class TypeChecker:
         if not isinstance(actual_return_type, type(expected_return_type)):
             raise UnexpectedTypeError(type(expected_return_type), type(actual_return_type))
 
-    def infer_expression_type(self, expr: stellaParser.ExprContext, type_context: TypeContext) -> stellaParser.StellatypeContext:
+    def infer_expression_type(self, expr: stellaParser.ExprContext,
+                              type_context: TypeContext) -> stellaParser.StellatypeContext:
         match expr:
             case stellaParser.ConstFalseContext():
                 return self.__make_context(stellaParser.TypeBoolContext)
@@ -119,6 +122,52 @@ class TypeChecker:
                     let_type_ctx.insert(binding_token, binding_type)
 
                 return self.infer_expression_type(body, let_type_ctx)
+            case stellaParser.RecordContext() as record_ctx:
+                record_type = stellaParser.TypeRecordContext(record_ctx.parser, record_ctx)
+                for pattern_binding in record_ctx.bindings:
+                    record_field_ctx = stellaParser.RecordFieldTypeContext(record_ctx.parser, record_type)
+                    record_field_ctx.label = pattern_binding.name
+                    record_field_ctx.type_ = self.infer_expression_type(pattern_binding.rhs, type_context)
+                    record_type.fieldTypes.append(record_field_ctx)
+                return record_type
+            case stellaParser.DotRecordContext() as dot_record_ctx:
+                record_type = self.infer_expression_type(dot_record_ctx.expr_, type_context)
+                if not isinstance(record_type, stellaParser.TypeRecordContext):
+                    raise NotRecordError
+
+                record_type_map = TypeContext()
+                for field_type in record_type.fieldTypes:
+                    record_type_map.insert(field_type.label, field_type.type_)
+
+                label_type = record_type_map.find(dot_record_ctx.label)
+                if label_type is None:
+                    raise UnexpectedFieldAccessError
+                return label_type
+            case stellaParser.TupleContext() as tuple_ctx:
+                tuple_type = stellaParser.TypeTupleContext(tuple_ctx.parser, tuple_ctx)
+                for tuple_expr in tuple_ctx.exprs:
+                    tuple_type.types.append(self.infer_expression_type(tuple_expr, type_context))
+                return tuple_type
+            case stellaParser.DotTupleContext() as dot_tuple_ctx:
+                tuple_type = self.infer_expression_type(dot_tuple_ctx.expr_, type_context)
+                if not isinstance(tuple_type, stellaParser.TypeTupleContext):
+                    raise UnexpectedTypeError(stellaParser.TypeTupleContext, type(tuple_type))
+                int_index = int(dot_tuple_ctx.index.text)
+                if int_index < 1 or int_index > len(tuple_type.types):
+                    raise TupleIndexOutOfBoundsError
+                return tuple_type.types[int_index - 1]
+            case stellaParser.ListContext() as list_ctx:
+                list_type = stellaParser.TypeListContext(list_ctx.parser, list_ctx)
+                if len(list_ctx.exprs) == 0:
+                    return list_type
+                first_element_type = self.infer_expression_type(list_ctx.exprs[0], type_context)
+
+            case stellaParser.AnnotationContext() as annotation_ctx:
+                raise NotImplementedError("Annotation")
+            case stellaParser.ConstUnitContext() as const_unit_ctx:
+                raise NotImplementedError("Unit")
+            case stellaParser.VariantContext() as variant_ctx:
+                raise NotImplementedError("Variant")
             case _ as unexpected_context:
                 print(type(unexpected_context))
                 print(unexpected_context.start)

@@ -17,6 +17,12 @@ class TypeContext:
             for ident, ident_type in context.items():
                 if str(token) == str(ident):
                     return ident_type
+                else:
+                    try:
+                        if token.text == ident.text:
+                            return ident_type
+                    except AttributeError:
+                        pass
         return None
 
     @property

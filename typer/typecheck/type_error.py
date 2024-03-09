@@ -23,6 +23,20 @@ class NotFunctionError(StellaTypeError):
         super().__init__("ERROR_NOT_A_FUNCTION")
 
 
+class NotRecordError(StellaTypeError):
+    def __init__(self) -> None:
+        super().__init__("ERROR_NOT_A_RECORD")
+
+
+class TupleIndexOutOfBoundsError(StellaTypeError):
+    def __init__(self) -> None:
+        super().__init__("ERROR_TUPLE_INDEX_OUT_OF_BOUNDS")
+
+class UnexpectedFieldAccessError(StellaTypeError):
+    def __init__(self) -> None:
+        super().__init__("ERROR_UNEXPECTED_FIELD_ACCESS")
+
+
 class UnexpectedTypeForParameterError(StellaTypeError):
     def __init__(self) -> None:
         super().__init__("ERROR_UNEXPECTED_TYPE_FOR_PARAMETER")
