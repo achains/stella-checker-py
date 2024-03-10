@@ -56,6 +56,16 @@ class UnexpectedListError(StellaTypeError):
         super().__init__(f"ERROR_UNEXPECTED_LIST\nExpected: {expected_type}")
 
 
+class UnexpectedRecordError(StellaTypeError):
+    def __init__(self, expected_type) -> None:
+        super().__init__(f"ERROR_UNEXPECTED_RECORD\nExpected: {expected_type}")
+
+
+class UnexpectedTupleError(StellaTypeError):
+    def __init__(self, expected_type) -> None:
+        super().__init__(f"ERROR_UNEXPECTED_TUPLE\nExpected: {expected_type}")
+
+
 class IncorrectNumberOfArgumentsError(StellaTypeError):
     def __init__(self, expected_number: int, actual_number: int) -> None:
         super().__init__(f"ERROR_INCORRECT_NUMBER_OF_ARGUMENTS\nExpected: {expected_number}\nActual: {actual_number}")
