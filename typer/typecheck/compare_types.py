@@ -22,4 +22,6 @@ def compare_types(expected: Stella.StellatypeContext, actual: Stella.StellatypeC
             raise NotImplementedError("Add check for missing tuple length")
         for expected_type, actual_type in zip(expected.types, actual.types):
             compare_types(expected_type, actual_type)
+    elif isinstance(expected, Stella.TypeParensContext):
+        return compare_types(expected.type_, actual.type_)
     return True

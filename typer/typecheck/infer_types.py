@@ -3,6 +3,7 @@ from typing import Tuple
 from typer.typecheck.type_error import *
 from typer.typecheck.type_map import TypeMap
 from typer.typecheck.compare_types import compare_types
+from typer.typecheck.exhaustive_check import exhaustive_check, create_case_type_getter
 
 
 def infer_types(program_context: Stella.ProgramContext):
@@ -107,6 +108,16 @@ def infer_expression_type(expression: Stella.ExprContext,
         # Type ascription
         case Stella.TypeAscContext() as type_asc_ctx:
             return _infer_ascription(type_asc_ctx, scope_types, expected_type)
+        # Sum types
+        case Stella.InlContext() as inl_ctx:
+            return _infer_inl(inl_ctx, scope_types, expected_type)
+        case Stella.InrContext() as inr_ctx:
+            return _infer_inr(inr_ctx, scope_types, expected_type)
+        case Stella.MatchContext() as match_ctx:
+            return _infer_match(match_ctx, scope_types, expected_type)
+        # Variant types
+        case Stella.VariantContext() as variant_ctx:
+            return _infer_variant(variant_ctx, scope_types, expected_type)
         # Function declaration
         case Stella.DeclFunContext() as fun_ctx:
             expected_return_type = scope_types.find(fun_ctx.StellaIdent().symbol).returnType
@@ -179,7 +190,7 @@ def _infer_abstraction(expression: Stella.AbstractionContext, scope_types: TypeM
     for param_decl in expression.paramDecls:
         return_type_scope.insert(param_decl.StellaIdent().symbol, param_decl.paramType)
 
-    return_type = infer_expression_type(expression.returnExpr, return_type_scope, expected_type.returnType)
+    return_type = infer_expression_type(expression.returnExpr, return_type_scope, expected_type.returnType if expected_type else None)
 
     abstraction_fun_type = Stella.TypeFunContext(expression.parser, expression)
     abstraction_fun_type.paramTypes = [param_decl.paramType for param_decl in expression.paramDecls]
@@ -247,8 +258,6 @@ def _infer_is_empty(expression: Stella.IsEmptyContext, scope_types: TypeMap,
 @check_inferred_type()
 def _infer_record(expression: Stella.RecordContext, scope_types: TypeMap,
                   expected_type: Stella.StellatypeContext = None):
-    # if not isinstance(expected_type, Stella.TypeRecordContext):
-    #     raise UnexpectedRecordError(expected_type)
     record_type = Stella.TypeRecordContext(expression.parser, expression)
     for pattern_binding in expression.bindings:
         record_field_ctx = Stella.RecordFieldTypeContext(record_type.parser, record_type)
@@ -278,8 +287,6 @@ def _infer_dot_record(expression: Stella.DotRecordContext, scope_types: TypeMap,
 
 @check_inferred_type()
 def _infer_tuple(expression: Stella.TupleContext, scope_types: TypeMap, expected_type: Stella.StellatypeContext = None):
-    # if not isinstance(expected_type, Stella.TypeTupleContext):
-    #     raise UnexpectedTupleError(expected_type)
     tuple_type = Stella.TypeTupleContext(expression.parser, expression)
     for i, expr in enumerate(expression.exprs):
         # TODO: Add expected field type from expected_type
@@ -298,13 +305,73 @@ def _infer_dot_tuple(expression: Stella.DotTupleContext, scope_types: TypeMap,
     int_idx = int(expression.index.text)
     if int_idx < 1 or int_idx > len(tuple_type.types):
         raise TupleIndexOutOfBoundsError
-    # TODO: Add recursive type comparison
     return tuple_type.types[int_idx - 1]
 
 
 @check_inferred_type()
 def _infer_ascription(expression: Stella.TypeAscContext, scope_types: TypeMap, expected_type: Stella.StellatypeContext = None):
     asc_expr_type = infer_expression_type(expression.expr_, scope_types, expression.type_)
-    equal_types = compare_types(asc_expr_type, expected_type)
 
     return asc_expr_type
+
+
+@check_inferred_type()
+def _infer_inl(expression: Stella.InlContext, scope_types: TypeMap, expected_type: Stella.StellatypeContext = None):
+    if not expected_type:
+        raise AmbiguousSumTypeError
+    if not isinstance(expected_type, Stella.TypeSumContext):
+        raise UnexpectedInjectionError(expected_type)
+
+    inl_type = infer_expression_type(expression.expr_, scope_types, expected_type.left)
+    return expected_type
+
+
+@check_inferred_type()
+def _infer_inr(expression: Stella.InlContext, scope_types: TypeMap, expected_type: Stella.StellatypeContext = None):
+    if not expected_type:
+        raise AmbiguousSumTypeError
+    if not isinstance(expected_type, Stella.TypeSumContext):
+        raise UnexpectedInjectionError(expected_type)
+
+    inr_type = infer_expression_type(expression.expr_, scope_types, expected_type.right)
+    return expected_type
+
+
+@check_inferred_type()
+def _infer_variant(expression: Stella.VariantContext, scope_types: TypeMap, expected_type: Stella.StellatypeContext = None):
+    if not expected_type:
+        raise AmbiguousVariantTypeError
+    if not isinstance(expected_type, Stella.TypeVariantContext):
+        raise UnexpectedVariantError(expected_type)
+
+    variant_field_types = TypeMap()
+    for var_field_type in expected_type.fieldTypes:
+        variant_field_types.insert(var_field_type.label, var_field_type)
+
+    try:
+        variant_type = variant_field_types.find(expression.label)
+    except UndefinedVarError:
+        raise UnexpectedVariantLabelError(expression.label)
+    return expected_type
+
+
+@check_inferred_type()
+def _infer_match(expression: Stella.MatchContext, scope_types: TypeMap, expected_type: Stella.StellatypeContext = None):
+    expr_type = infer_expression_type(expression.expr_, scope_types)
+
+    if len(expression.cases) == 0:
+        raise IllegalEmptyMatchError
+
+    case_to_type_map = exhaustive_check(expr_type, expression.cases)
+    type_getter = create_case_type_getter(expr_type, case_to_type_map)
+
+    match_case: Stella.MatchCaseContext
+    for match_case in expression.cases:
+        case_type = type_getter(match_case.pattern_)
+        pattern_var: Stella.PatternVarContext = match_case.pattern_.pattern_
+        case_scope_types = scope_types.nested_scope()
+        case_scope_types.insert(pattern_var.name, case_type)
+        infer_expression_type(match_case.expr_, case_scope_types, expected_type)
+
+    return expected_type
+

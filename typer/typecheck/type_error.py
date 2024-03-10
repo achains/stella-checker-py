@@ -31,9 +31,34 @@ class UnexpectedLambdaError(StellaTypeError):
         super().__init__(f"ERROR_UNEXPECTED_LAMBDA\nGot lambda while expecting {expected_type}")
 
 
+class UnexpectedInjectionError(StellaTypeError):
+    def __init__(self, expected_type) -> None:
+        super().__init__(f"ERROR_UNEXPECTED_INJECTION\nGot injection while expecting {expected_type}")
+
+
+class UnexpectedVariantError(StellaTypeError):
+    def __init__(self, expected_type) -> None:
+        super().__init__(f"ERROR_UNEXPECTED_VARIANT\nGot variant while expecting {expected_type}")
+
+
 class AmbiguousListTypeError(StellaTypeError):
     def __init__(self) -> None:
         super().__init__(f"ERROR_AMBIGUOUS_LIST\nMissing list type context")
+
+
+class AmbiguousSumTypeError(StellaTypeError):
+    def __init__(self) -> None:
+        super().__init__(f"ERROR_AMBIGUOUS_SUM_TYPE")
+
+
+class AmbiguousVariantTypeError(StellaTypeError):
+    def __init__(self) -> None:
+        super().__init__(f"ERROR_AMBIGUOUS_VARIANT_TYPE")
+
+
+class UnexpectedVariantLabelError(StellaTypeError):
+    def __init__(self, label) -> None:
+        super().__init__(f"ERROR_UNEXPECTED_VARIANT_LABEL {label}")
 
 
 class NotRecordError(StellaTypeError):
@@ -74,3 +99,18 @@ class IncorrectNumberOfArgumentsError(StellaTypeError):
 class UnexpectedTypeForParameterError(StellaTypeError):
     def __init__(self) -> None:
         super().__init__("ERROR_UNEXPECTED_TYPE_FOR_PARAMETER")
+
+
+class IllegalEmptyMatchError(StellaTypeError):
+    def __init__(self) -> None:
+        super().__init__("ERROR_ILLEGAL_EMPTY_MATCHING")
+
+
+class NonExhaustiveMatchError(StellaTypeError):
+    def __init__(self) -> None:
+        super().__init__("ERROR_NONEXHAUSTIVE_MATCH_PATTERNS")
+
+
+class UnexpectedPatternForTypeError(StellaTypeError):
+    def __init__(self, pattern, match_type) -> None:
+        super().__init__(f"ERROR_UNEXPECTED_PATTERN_FOR_TYPE\nPattern: {pattern}\nMatch expression type: {match_type}")
