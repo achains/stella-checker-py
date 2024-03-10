@@ -24,36 +24,22 @@ def infer_types(program_context: Stella.ProgramContext):
         infer_expression_type(fun_decl, scope_types)
 
 
-# def check_inferred_type(deep_compare=False):
-#     def _check_impl(infer_impl):
-#         def infer(expression: Stella.ExprContext, scope_types: TypeMap, expected_type: Stella.StellatypeContext = None):
-#             actual_type = infer_impl(expression, scope_types, expected_type)
-#             if deep_compare:
-#                 compare_types(expected_type, actual_type)
-#             else:
-#                 if expected_type and not isinstance(actual_type, type(expected_type)):
-#                     raise UnexpectedTypeError(type(expected_type), type(actual_type))
-#             return actual_type
-#
-#         return infer
-#     return _check_impl
-
-
-def check_inferred_type(infer_impl):
-    def infer_type(expression: Stella.ExprContext, scope_types: TypeMap,
-                   expected_type: Stella.StellatypeContext = None):
-        actual_type = infer_impl(expression, scope_types, expected_type)
-        if expected_type and not isinstance(actual_type, type(expected_type)):
-            if isinstance(expected_type, Stella.TypeFunContext):
-                raise NotFunctionError(actual_type)
+def check_inferred_type(deep_compare=False):
+    def _check_impl(infer_impl):
+        def infer(expression: Stella.ExprContext, scope_types: TypeMap, expected_type: Stella.StellatypeContext = None):
+            actual_type = infer_impl(expression, scope_types, expected_type)
+            if deep_compare:
+                compare_types(expected_type, actual_type)
             else:
-                raise UnexpectedTypeError(type(expected_type), type(actual_type))
-        return actual_type
+                if expected_type and not isinstance(actual_type, type(expected_type)):
+                    raise UnexpectedTypeError(type(expected_type), type(actual_type))
+            return actual_type
 
-    return infer_type
+        return infer
+    return _check_impl
 
 
-@check_inferred_type
+@check_inferred_type()
 def infer_expression_type(expression: Stella.ExprContext,
                           scope_types: TypeMap,
                           expected_type: Stella.StellatypeContext = None):
@@ -134,19 +120,19 @@ def infer_expression_type(expression: Stella.ExprContext,
             raise NotImplementedError
 
 
-@check_inferred_type
+@check_inferred_type()
 def _infer_bool(expression: Stella.ConstFalseContext | Stella.ConstTrueContext, scope_types: TypeMap,
                 expected_type: Stella.StellatypeContext = None):
     return Stella.TypeBoolContext(expression.parser, expression)
 
 
-@check_inferred_type
+@check_inferred_type()
 def _infer_int(expression: Stella.ConstIntContext, scope_types: TypeMap,
                expected_type: Stella.StellatypeContext = None):
     return Stella.TypeNatContext(expression.parser, expression)
 
 
-@check_inferred_type
+@check_inferred_type()
 def _infer_if(expression: Stella.IfContext, scope_types: TypeMap, expected_type: Stella.StellatypeContext = None):
     condition = infer_expression_type(expression.condition, scope_types,
                                       Stella.TypeBoolContext(expression.parser, expression))
@@ -157,14 +143,14 @@ def _infer_if(expression: Stella.IfContext, scope_types: TypeMap, expected_type:
     return then_type
 
 
-@check_inferred_type
+@check_inferred_type()
 def _infer_nat_increment(expression: Stella.SuccContext | Stella.PredContext, scope_types: TypeMap,
                          expected_type: Stella.StellatypeContext = None):
     inner_type = infer_expression_type(expression.n, scope_types, Stella.TypeNatContext(expression.parser, expression))
     return inner_type
 
 
-@check_inferred_type
+@check_inferred_type()
 def _infer_application(expression: Stella.ApplicationContext, scope_types: TypeMap,
                        expected_type: Stella.StellatypeContext = None):
     expected_lhs_fun_type = Stella.TypeFunContext(expression.parser, expression)
@@ -183,7 +169,7 @@ def _infer_application(expression: Stella.ApplicationContext, scope_types: TypeM
     return fun_type.returnType
 
 
-@check_inferred_type
+@check_inferred_type()
 def _infer_abstraction(expression: Stella.AbstractionContext, scope_types: TypeMap,
                        expected_type: Stella.StellatypeContext = None):
     if expected_type and not isinstance(expected_type, Stella.TypeFunContext):
@@ -202,7 +188,7 @@ def _infer_abstraction(expression: Stella.AbstractionContext, scope_types: TypeM
     return abstraction_fun_type
 
 
-@check_inferred_type
+@check_inferred_type()
 def _infer_let(expression: Stella.LetContext, scope_types: TypeMap, expected_type: Stella.StellatypeContext = None):
     let_scope = scope_types.nested_scope()
     pattern_binding: Stella.PatternBindingContext
@@ -213,7 +199,7 @@ def _infer_let(expression: Stella.LetContext, scope_types: TypeMap, expected_typ
     return infer_expression_type(expression.body, let_scope, expected_type)
 
 
-@check_inferred_type
+@check_inferred_type()
 def _infer_list(expression: Stella.ListContext, scope_types: TypeMap, expected_type: Stella.StellatypeContext = None):
     if not expected_type:
         raise AmbiguousListTypeError
@@ -224,7 +210,7 @@ def _infer_list(expression: Stella.ListContext, scope_types: TypeMap, expected_t
     return expected_type
 
 
-@check_inferred_type
+@check_inferred_type()
 def _infer_cons_list(expression: Stella.ConsListContext, scope_types: TypeMap,
                      expected_type: Stella.StellatypeContext = None):
     if not expected_type:
@@ -237,7 +223,7 @@ def _infer_cons_list(expression: Stella.ConsListContext, scope_types: TypeMap,
     return expected_type
 
 
-@check_inferred_type
+@check_inferred_type()
 def _infer_list_head(expression: Stella.HeadContext, scope_types: TypeMap, expected_type: Stella.StellatypeContext = None):
     expected_list_type = Stella.TypeListContext(expression.parser, expression)
     expected_list_type.type_ = expected_type
@@ -245,20 +231,20 @@ def _infer_list_head(expression: Stella.HeadContext, scope_types: TypeMap, expec
     return expected_type
 
 
-@check_inferred_type
+@check_inferred_type()
 def _infer_list_tail(expression: Stella.TailContext, scope_types: TypeMap, expected_type: Stella.StellatypeContext = None):
     infer_expression_type(expression.list_, scope_types, expected_type)
     return expected_type
 
 
-@check_inferred_type
+@check_inferred_type()
 def _infer_is_empty(expression: Stella.IsEmptyContext, scope_types: TypeMap,
                     expected_type: Stella.StellatypeContext = None):
     list_type = infer_expression_type(expression.list_, scope_types)
     return Stella.TypeBoolContext(expression.parser, expression)
 
 
-@check_inferred_type
+@check_inferred_type()
 def _infer_record(expression: Stella.RecordContext, scope_types: TypeMap,
                   expected_type: Stella.StellatypeContext = None):
     # if not isinstance(expected_type, Stella.TypeRecordContext):
@@ -273,7 +259,7 @@ def _infer_record(expression: Stella.RecordContext, scope_types: TypeMap,
     return record_type
 
 
-@check_inferred_type
+@check_inferred_type()
 def _infer_dot_record(expression: Stella.DotRecordContext, scope_types: TypeMap,
                       expected_type: Stella.StellatypeContext = None):
     record_type = infer_expression_type(expression.expr_, scope_types)
@@ -290,7 +276,7 @@ def _infer_dot_record(expression: Stella.DotRecordContext, scope_types: TypeMap,
     return label_type
 
 
-@check_inferred_type
+@check_inferred_type()
 def _infer_tuple(expression: Stella.TupleContext, scope_types: TypeMap, expected_type: Stella.StellatypeContext = None):
     # if not isinstance(expected_type, Stella.TypeTupleContext):
     #     raise UnexpectedTupleError(expected_type)
@@ -303,7 +289,7 @@ def _infer_tuple(expression: Stella.TupleContext, scope_types: TypeMap, expected
     return tuple_type
 
 
-@check_inferred_type
+@check_inferred_type(deep_compare=True)
 def _infer_dot_tuple(expression: Stella.DotTupleContext, scope_types: TypeMap,
                      expected_type: Stella.StellatypeContext = None):
     tuple_type = infer_expression_type(expression.expr_, scope_types,
@@ -316,7 +302,7 @@ def _infer_dot_tuple(expression: Stella.DotTupleContext, scope_types: TypeMap,
     return tuple_type.types[int_idx - 1]
 
 
-@check_inferred_type
+@check_inferred_type()
 def _infer_ascription(expression: Stella.TypeAscContext, scope_types: TypeMap, expected_type: Stella.StellatypeContext = None):
     asc_expr_type = infer_expression_type(expression.expr_, scope_types, expression.type_)
     equal_types = compare_types(asc_expr_type, expected_type)

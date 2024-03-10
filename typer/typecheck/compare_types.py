@@ -14,7 +14,12 @@ def compare_types(expected: Stella.StellatypeContext, actual: Stella.StellatypeC
             case Stella.TypeListContext():
                 raise UnexpectedListError(expected)
             case _:
-                raise UnexpectedTypeError(expected, actual)
+                raise UnexpectedTypeError(type(expected), type(actual))
     elif isinstance(expected, Stella.TypeListContext):
         return compare_types(expected.type_, actual.type_)
+    elif isinstance(expected, Stella.TypeTupleContext):
+        if len(expected.types) != len(actual.types):
+            raise NotImplementedError("Add check for missing tuple length")
+        for expected_type, actual_type in zip(expected.types, actual.types):
+            compare_types(expected_type, actual_type)
     return True
