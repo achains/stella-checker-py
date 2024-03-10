@@ -145,6 +145,6 @@ _minted-presentation/
 *.fls
 *.gz
 
-# GQL Parser Generated Files
-typer/grammar/*
-!typer/grammar/__init__.py
+# ANTLR Generated Files
+#typer/grammar/*
+#!typer/grammar/__init__.py
