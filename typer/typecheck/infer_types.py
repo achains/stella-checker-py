@@ -2,7 +2,7 @@ from typing import Tuple
 
 from typer.typecheck.type_error import *
 from typer.typecheck.type_map import TypeMap
-from typer.typecheck.compare_types import compare_types
+from typer.typecheck.compare_types import compare_types, unwind_parens
 from typer.typecheck.exhaustive_check import exhaustive_check, create_case_type_getter
 
 
@@ -40,7 +40,15 @@ def check_inferred_type(deep_compare=False):
     return _check_impl
 
 
-@check_inferred_type()
+def unwind_parens_wrapper(infer_impl):
+    def _infer(expression: Stella.ExprContext, scope_types: TypeMap, expected_type: Stella.StellatypeContext = None):
+        result = infer_impl(expression, scope_types, expected_type)
+        return unwind_parens(result) if result else None
+    return _infer
+
+
+@check_inferred_type(deep_compare=True)
+@unwind_parens_wrapper
 def infer_expression_type(expression: Stella.ExprContext,
                           scope_types: TypeMap,
                           expected_type: Stella.StellatypeContext = None):
@@ -62,6 +70,8 @@ def infer_expression_type(expression: Stella.ExprContext,
         case Stella.IsZeroContext() as is_zero_ctx:
             infer_expression_type(is_zero_ctx.n, scope_types, Stella.TypeNatContext(is_zero_ctx.parser, is_zero_ctx))
             return Stella.TypeBoolContext(is_zero_ctx.parser, is_zero_ctx)
+        case Stella.NatRecContext() as nat_rec_ctx:
+            return _infer_nat_rec(nat_rec_ctx, scope_types, expected_type)
         # If expression
         case Stella.IfContext() as if_ctx:
             return _infer_if(if_ctx, scope_types, expected_type)
@@ -162,6 +172,23 @@ def _infer_nat_increment(expression: Stella.SuccContext | Stella.PredContext, sc
 
 
 @check_inferred_type()
+def _infer_nat_rec(expression: Stella.NatRecContext, scope_types: TypeMap, expected_type: Stella.StellatypeContext = None):
+    n_type = infer_expression_type(expression.n, scope_types, Stella.TypeNatContext(expression.parser, expression))
+    initial_type = infer_expression_type(expression.initial, scope_types, expected_type)
+
+    step_fun_type = Stella.TypeFunContext(expression.parser, expression)
+    step_fun_type.paramTypes = [n_type]
+    step_fun_type.returnType = Stella.TypeParensContext(step_fun_type.parser, step_fun_type)
+    step_fun_type.returnType.type_ = Stella.TypeFunContext(step_fun_type.parser, step_fun_type)
+
+    step_fun_type.returnType.type_.paramTypes = [initial_type]
+    step_fun_type.returnType.type_.returnType = initial_type
+
+    infer_expression_type(expression.step, scope_types, step_fun_type)
+    return expected_type
+
+
+@check_inferred_type(deep_compare=True)
 def _infer_application(expression: Stella.ApplicationContext, scope_types: TypeMap,
                        expected_type: Stella.StellatypeContext = None):
     expected_lhs_fun_type = Stella.TypeFunContext(expression.parser, expression)
@@ -180,10 +207,15 @@ def _infer_application(expression: Stella.ApplicationContext, scope_types: TypeM
     return fun_type.returnType
 
 
-@check_inferred_type()
+@check_inferred_type(deep_compare=True)
 def _infer_abstraction(expression: Stella.AbstractionContext, scope_types: TypeMap,
                        expected_type: Stella.StellatypeContext = None):
-    if expected_type and not isinstance(expected_type, Stella.TypeFunContext):
+    if not expected_type:
+        raise UnexpectedLambdaError(type(expected_type))
+
+    expected_type = unwind_parens(expected_type)
+
+    if not isinstance(expected_type, Stella.TypeFunContext):
         raise UnexpectedLambdaError(type(expected_type))
 
     return_type_scope = scope_types.nested_scope()

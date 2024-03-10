@@ -2,7 +2,17 @@ from typer.typecheck.type_error import *
 from typer.grammar.stellaParser import stellaParser as Stella
 
 
+def unwind_parens(parens_type: Stella.StellatypeContext):
+    while isinstance(parens_type, Stella.TypeParensContext):
+        parens_type = parens_type.type_
+    return parens_type
+
+
 def compare_types(expected: Stella.StellatypeContext, actual: Stella.StellatypeContext):
+    if not expected:
+        return True
+    expected = unwind_parens(expected)
+    actual = unwind_parens(actual)
     if type(expected) is not type(actual):
         match actual:
             case Stella.TypeFunContext():

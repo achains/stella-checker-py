@@ -16,6 +16,8 @@ def exhaustive_check(match_expression: Stella.StellatypeContext, match_cases: li
             return _check_match_sum_type(sum_type, match_cases)
         case Stella.TypeVariantContext() as variant_type:
             return _check_match_variant_type(variant_type, match_cases)
+        case _:
+            raise NotImplementedError(f"Pattern matching for {type(match_expression)}")
 
 
 def _check_match_sum_type(match_expression: Stella.TypeSumContext, match_cases: list[Stella.MatchCaseContext]):
