@@ -128,6 +128,9 @@ def infer_expression_type(expression: Stella.ExprContext,
         # Variant types
         case Stella.VariantContext() as variant_ctx:
             return _infer_variant(variant_ctx, scope_types, expected_type)
+        # Fix-point
+        case Stella.FixContext() as fix_ctx:
+            return _infer_fix(fix_ctx, scope_types, expected_type)
         # Function declaration
         case Stella.DeclFunContext() as fun_ctx:
             expected_return_type = scope_types.find(fun_ctx.StellaIdent().symbol).returnType
@@ -210,12 +213,9 @@ def _infer_application(expression: Stella.ApplicationContext, scope_types: TypeM
 @check_inferred_type(deep_compare=True)
 def _infer_abstraction(expression: Stella.AbstractionContext, scope_types: TypeMap,
                        expected_type: Stella.StellatypeContext = None):
-    if not expected_type:
-        raise UnexpectedLambdaError(type(expected_type))
+    expected_type = unwind_parens(expected_type) if expected_type else None
 
-    expected_type = unwind_parens(expected_type)
-
-    if not isinstance(expected_type, Stella.TypeFunContext):
+    if expected_type and not isinstance(expected_type, Stella.TypeFunContext):
         raise UnexpectedLambdaError(type(expected_type))
 
     return_type_scope = scope_types.nested_scope()
@@ -407,3 +407,8 @@ def _infer_match(expression: Stella.MatchContext, scope_types: TypeMap, expected
 
     return expected_type
 
+
+@check_inferred_type()
+def _infer_fix(expression: Stella.FixContext, scope_types: TypeMap, expected_type: Stella.StellatypeContext = None):
+    inner_expr_type = infer_expression_type(expression.expr_, scope_types)
+    return inner_expr_type.returnType
