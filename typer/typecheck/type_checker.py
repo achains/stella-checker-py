@@ -3,11 +3,14 @@ from typing import Type
 from antlr4.Token import CommonToken
 
 from typer.grammar.stellaParser import stellaParser
-from typer.typecheck.type_context import TypeContext
 from typer.typecheck.type_error import *
 from typer.typecheck.utils import make_function_type, make_context
 
 __all__ = ["TypeChecker"]
+
+
+class TypeContext:
+    pass
 
 
 class TypeChecker:

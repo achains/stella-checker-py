@@ -4,7 +4,7 @@ from antlr4 import InputStream, CommonTokenStream
 from typer.grammar.stellaLexer import stellaLexer
 from typer.grammar.stellaParser import stellaParser
 
-from typer import TypeChecker
+from typer.typecheck.infer_types import infer_types
 from typer.typecheck.type_error import StellaTypeError
 
 
@@ -14,10 +14,8 @@ def check_program_types(program_source: str):
     token_stream = CommonTokenStream(lexer)
     parser = stellaParser(token_stream)
 
-    type_checker = TypeChecker(parser.program())
-
     try:
-        type_checker.check_program_types()
+        infer_types(parser.program())
     except StellaTypeError as e:
         print(e.message)
         return False
