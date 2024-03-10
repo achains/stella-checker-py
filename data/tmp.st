@@ -1,7 +1,6 @@
 language core;
+extend with #unit-type;
 
-extend with #fixpoint-combinator;
-
-fn main(n : Nat) -> Nat {
-  return fix(fn(y : Nat) { return n });
+fn main(_ : Nat) -> Unit {
+    return unit
 }

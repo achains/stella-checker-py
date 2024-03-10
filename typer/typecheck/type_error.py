@@ -22,8 +22,23 @@ class UnexpectedTypeError(StellaTypeError):
 
 
 class NotFunctionError(StellaTypeError):
-    def __init__(self, expression: Stella.ExprContext) -> None:
-        super().__init__(f"ERROR_NOT_A_FUNCTION\n{expression.start}")
+    def __init__(self, actual) -> None:
+        super().__init__(f"ERROR_NOT_A_FUNCTION\n{actual}")
+
+
+class NotListError(StellaTypeError):
+    def __init__(self, actual) -> None:
+        super().__init__(f"ERROR_NOT_A_LIST\n{actual}")
+
+
+class NotTupleError(StellaTypeError):
+    def __init__(self, actual) -> None:
+        super().__init__(f"ERROR_NOT_A_TUPLE\n{actual}")
+
+
+class UnexpectedTupleLengthError(StellaTypeError):
+    def __init__(self, expected_length, actual) -> None:
+        super().__init__(f"ERROR_UNEXPECTED_TUPLE_LENGTH\nExpected: {expected_length}\nActual: {actual}")
 
 
 class UnexpectedLambdaError(StellaTypeError):
@@ -39,6 +54,16 @@ class UnexpectedInjectionError(StellaTypeError):
 class UnexpectedVariantError(StellaTypeError):
     def __init__(self, expected_type) -> None:
         super().__init__(f"ERROR_UNEXPECTED_VARIANT\nGot variant while expecting {expected_type}")
+
+
+class MissingRecordFieldsError(StellaTypeError):
+    def __init__(self) -> None:
+        super().__init__(f"ERROR_MISSING_RECORD_FIELDS")
+
+
+class UnexpectedRecordFieldsError(StellaTypeError):
+    def __init__(self) -> None:
+        super().__init__(f"ERROR_UNEXPECTED_RECORD_FIELDS")
 
 
 class AmbiguousListTypeError(StellaTypeError):
@@ -74,7 +99,7 @@ class TupleIndexOutOfBoundsError(StellaTypeError):
 class UnexpectedFieldAccessError(StellaTypeError):
     def __init__(self) -> None:
         super().__init__("ERROR_UNEXPECTED_FIELD_ACCESS")
-        
+
 
 class UnexpectedListError(StellaTypeError):
     def __init__(self, expected_type) -> None:
